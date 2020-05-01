@@ -80,6 +80,7 @@ class CoroutineTransformerMethodVisitor(
     private var continuationIndex = if (isForNamedFunction) -1 else 0
     private var dataIndex = if (isForNamedFunction) -1 else 1
     private var exceptionIndex = if (isForNamedFunction || languageVersionSettings.isReleaseCoroutines()) -1 else 2
+    private var beforeSuspendIndex = maxOf(continuationIndex, dataIndex, exceptionIndex) + 1
 
     override fun performTransformations(methodNode: MethodNode) {
         removeFakeContinuationConstructorCall(methodNode)
@@ -127,6 +128,7 @@ class CoroutineTransformerMethodVisitor(
                 exceptionIndex = methodNode.maxLocals++
             }
             continuationIndex = methodNode.maxLocals++
+            beforeSuspendIndex = methodNode.maxLocals++
 
             prepareMethodNodePreludeForNamedFunction(methodNode)
         }
@@ -765,13 +767,19 @@ class CoroutineTransformerMethodVisitor(
                 }
             )
 
+            val returnLabel = LabelNode()
+
+            methodNode.visitLocalVariable(
+                AsmUtil.SUSPENSION_POINT_VARIABLE_PREFIX, Type.INT_TYPE.descriptor,
+                null, returnLabel.label, continuationLabel.label, beforeSuspendIndex
+            )
+
             insert(suspension.tryCatchBlockEndLabelAfterSuspensionCall, withInstructionAdapter {
                 dup()
                 load(suspendMarkerVarIndex, AsmTypes.OBJECT_TYPE)
                 ifacmpne(continuationLabelAfterLoadedResult.label)
 
                 // Exit
-                val returnLabel = LabelNode()
                 visitLabel(returnLabel.label)
                 // Special line number to stop in debugger before suspend return
                 visitLineNumber(suspendElementLineNumber, returnLabel.label)

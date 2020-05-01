@@ -125,6 +125,8 @@ public class AsmUtil {
 
     public static final String LOCAL_FUNCTION_VARIABLE_PREFIX = "$fun$";
 
+    public static final String SUSPENSION_POINT_VARIABLE_PREFIX = "$suspend$";
+
     private static final ImmutableMap<Integer, JvmPrimitiveType> primitiveTypeByAsmSort;
     private static final ImmutableMap<Type, Type> primitiveTypeByBoxedType;
 
